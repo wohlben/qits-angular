@@ -3,5 +3,9 @@
   "dest": "../../dist/qits-angular",
   "lib": {
     "entryFile": "src/public-api.ts"
-  }
+  },
+  "allowedNonPeerDependencies": [
+    "tslib",
+    "^@opentelemetry/"
+  ]
 }

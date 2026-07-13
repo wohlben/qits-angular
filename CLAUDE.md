@@ -1,8 +1,43 @@
 # CLAUDE.md — `@qits/angular`
 
-The integration library for Angular apps managed by [qits](https://github.com/wohlben/qits).
-Currently a walking skeleton (no-op providers); later qits plans add OTEL telemetry, feature
-capture, and state snapshots. See `README.md` for the consumer contract.
+The integration library for Angular apps managed by [qits](https://github.com/wohlben/qits):
+config.json-gated browser OTEL telemetry (traces + logs, route/interaction/caller enrichment,
+error shipping). Later qits plans add feature capture and state snapshots as
+`provideQitsIntegration(withFeature…)` arguments. See `README.md` for the consumer contract.
+
+## Shape of the integration (traps are load-bearing — don't "clean them up")
+
+Public API (all of `public-api.ts`): `initQitsIntegration(options?)` (pre-bootstrap, fetches the
+`api/config.json` identity relay, stays dark on `telemetry: null`, otherwise wires the OTEL web
+SDKs) and `provideQitsIntegration(...features)` (DI: `TelemetryErrorHandler` + route telemetry;
+`QitsIntegrationFeature.providers` is the tree-shakable seam for later features). The two-phase
+shape is not incidental: Angular's `FetchBackend` captures `window.fetch` on first use, so
+`initQitsIntegration()` must complete **before** `bootstrapApplication`.
+
+Ported verbatim from the qits fixture (`testing-repo-quarkus-angular`), each encoding a trap
+(details in qits' `docs/features/2026-07-06_spa-observability.md` and
+`2026-07-11_spa-telemetry-meta-enrichment.md`):
+
+- `init-qits-integration.ts` — exporter URLs are used **verbatim** by the proto exporters
+  (resolve per-signal URLs from `document.baseURI`); `ignoreUrls` excludes the `api/otel/v1/`
+  passthrough (else exports instrument themselves recursively); 1 s flush (iframe removal fires
+  no pagehide — the default 5 s buffer silently loses spans).
+- `route-context.ts` — module-level current-route state; stamping processors put
+  `app.route.path`/`app.route.url` on every span/log record.
+- `route-telemetry.ts` — `Navigation` spans + route tracking as an app initializer (router
+  wiring needs the injector, so it can't live in the pre-bootstrap init).
+- `interaction-telemetry.ts` — enrichment via the instrumentation's
+  `shouldPreventSpanCreation` hook (despite the name); `data-track-event` is read from
+  `closest()`, because a submit's target is the form.
+- `fetch-caller-attribution.ts` — `window.fetch` wrapper installed **before**
+  FetchInstrumentation registers so it runs inside the fetch span's context;
+  `Error.stackTraceLimit` lifted around capture (plumbing alone is ~50 frames).
+- `telemetry-error-handler.ts` — zoneless Angular funnels all errors through `ErrorHandler`,
+  never `window` listeners; apps keep `provideBrowserGlobalErrorListeners()`.
+
+The library is **zoneless-first**: no `zone.js`, no `@opentelemetry/context-zone` — the default
+stack context manager is correct. The `instrumentation-user-interaction` `zone.js` peer is
+marked optional via a pnpm `packageExtensions` entry here and in every consumer.
 
 ## Commands
 

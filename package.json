@@ -2,7 +2,7 @@
   "name": "@qits/angular",
   "version": "0.0.1",
   "private": true,
-  "description": "qits integration for Angular apps: telemetry, feature capture, state snapshots (walking skeleton).",
+  "description": "qits integration for Angular apps: config.json-gated OTEL telemetry (traces, logs, route/interaction/caller enrichment), later feature capture and state snapshots.",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -28,10 +28,33 @@
   },
   "sideEffects": false,
   "peerDependencies": {
-    "@angular/core": "^21.2.0"
+    "@angular/core": "^21.2.0",
+    "@angular/router": "^21.2.0"
   },
   "dependencies": {
+    "@opentelemetry/api": "^1.9.1",
+    "@opentelemetry/api-logs": "^0.220.0",
+    "@opentelemetry/exporter-logs-otlp-proto": "^0.220.0",
+    "@opentelemetry/exporter-trace-otlp-proto": "^0.220.0",
+    "@opentelemetry/instrumentation": "^0.220.0",
+    "@opentelemetry/instrumentation-document-load": "^0.65.0",
+    "@opentelemetry/instrumentation-fetch": "^0.220.0",
+    "@opentelemetry/instrumentation-user-interaction": "^0.64.0",
+    "@opentelemetry/resources": "^2.9.0",
+    "@opentelemetry/sdk-logs": "^0.220.0",
+    "@opentelemetry/sdk-trace-web": "^2.9.0",
     "tslib": "^2.3.0"
+  },
+  "pnpm": {
+    "packageExtensions": {
+      "@opentelemetry/instrumentation-user-interaction": {
+        "peerDependenciesMeta": {
+          "zone.js": {
+            "optional": true
+          }
+        }
+      }
+    }
   },
   "devDependencies": {
     "@angular-eslint/builder": "21.4.0",

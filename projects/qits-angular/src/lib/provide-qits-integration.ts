@@ -1,15 +1,39 @@
-import { EnvironmentProviders, makeEnvironmentProviders } from '@angular/core';
+import {
+  ErrorHandler,
+  makeEnvironmentProviders,
+  type EnvironmentProviders,
+  type Provider,
+} from '@angular/core';
+import { provideRouteTelemetry } from './route-telemetry';
+import { TelemetryErrorHandler } from './telemetry-error-handler';
 
 /**
- * Walking skeleton. Plan 1 (qits repo, docs/feature-ideas/qits-angular-integration-library-1.md)
- * replaces these no-ops with the real integration: config.json-gated OTEL telemetry, error
- * handler, route telemetry — then plans 3 and 4 add feature capture and state snapshots.
+ * A tree-shakable add-on to provideQitsIntegration, mirroring provideHttpClient(withFetch()):
+ * the base call stays telemetry-only and later features (feature capture, state snapshots) ship
+ * as with*() functions returning one of these instead of options that bloat every consumer.
  */
-export function provideQitsIntegration(): EnvironmentProviders {
-  return makeEnvironmentProviders([]);
+export interface QitsIntegrationFeature {
+  providers: (Provider | EnvironmentProviders)[];
 }
 
-/** Pre-bootstrap hook. Must be awaited before bootstrapApplication once plan 1 lands. */
-export async function initQitsIntegration(): Promise<void> {
-  // No-op walking skeleton; plan 1 fills this with config-gated telemetry init.
+/**
+ * DI wiring of the qits integration: the TelemetryErrorHandler (uncaught errors as ERROR-severity
+ * OTLP log records) and route telemetry (Navigation spans + app.route.* stamping on every
+ * span/log record). Everything is a no-op while telemetry is dark (no relay in api/config.json).
+ *
+ * Pair with `await initQitsIntegration()` in main.ts BEFORE bootstrapApplication — Angular's
+ * FetchBackend captures window.fetch on first use, so the fetch instrumentation must patch it
+ * first. The app must also keep `provideHttpClient(withFetch())` (the default XHR backend is
+ * invisible to the fetch instrumentation: no client spans, no traceparent) and the scaffold's
+ * `provideBrowserGlobalErrorListeners()` (it funnels genuinely-global errors and unhandled
+ * rejections into the ErrorHandler provided here).
+ */
+export function provideQitsIntegration(
+  ...features: QitsIntegrationFeature[]
+): EnvironmentProviders {
+  return makeEnvironmentProviders([
+    { provide: ErrorHandler, useClass: TelemetryErrorHandler },
+    provideRouteTelemetry(),
+    ...features.flatMap((feature) => feature.providers),
+  ]);
 }

@@ -19,5 +19,20 @@ for (const [pkg, range] of Object.entries(dist.peerDependencies ?? {})) {
     failed = true;
   }
 }
+// The consumer's package manager resolves the ROOT manifest's dependencies (git deps install the
+// repo root), while ng-packagr emits dist's from projects/qits-angular/package.json — both ways
+// of drifting ship a package that can't resolve its imports.
+for (const [pkg, range] of Object.entries(dist.dependencies ?? {})) {
+  if (root.dependencies?.[pkg] !== range) {
+    console.error(`dependency drift: dist declares ${pkg}@${range}, root has ${root.dependencies?.[pkg]}`);
+    failed = true;
+  }
+}
+for (const pkg of Object.keys(root.dependencies ?? {})) {
+  if (!dist.dependencies?.[pkg]) {
+    console.error(`dependency drift: root declares ${pkg}, missing from dist (add it to projects/qits-angular/package.json)`);
+    failed = true;
+  }
+}
 if (failed) process.exit(1);
-console.log('manifests in sync: root mirrors dist (exports + peers)');
+console.log('manifests in sync: root mirrors dist (exports + peers + dependencies)');
