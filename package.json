@@ -1,0 +1,58 @@
+{
+  "name": "@qits/angular",
+  "version": "0.0.1",
+  "private": true,
+  "description": "qits integration for Angular apps: telemetry, feature capture, state snapshots (walking skeleton).",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/wohlben/qits-angular.git"
+  },
+  "packageManager": "pnpm@10.33.0",
+  "scripts": {
+    "ng": "ng",
+    "build": "ng build qits-angular",
+    "test": "ng test qits-angular",
+    "lint": "ng lint qits-angular",
+    "check-exports": "node scripts/check-exports.mjs",
+    "prepare": "ng build qits-angular && node scripts/check-exports.mjs"
+  },
+  "files": [
+    "dist/qits-angular"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/qits-angular/types/qits-angular.d.ts",
+      "default": "./dist/qits-angular/fesm2022/qits-angular.mjs"
+    }
+  },
+  "sideEffects": false,
+  "peerDependencies": {
+    "@angular/core": "^21.2.0"
+  },
+  "dependencies": {
+    "tslib": "^2.3.0"
+  },
+  "devDependencies": {
+    "@angular-eslint/builder": "21.4.0",
+    "@angular/build": "^21.2.19",
+    "@angular/cli": "^21.2.19",
+    "@angular/common": "^21.2.0",
+    "@angular/compiler": "^21.2.0",
+    "@angular/compiler-cli": "^21.2.0",
+    "@angular/core": "^21.2.0",
+    "@angular/forms": "^21.2.0",
+    "@angular/platform-browser": "^21.2.0",
+    "@angular/router": "^21.2.0",
+    "@eslint/js": "^10.0.1",
+    "angular-eslint": "21.4.0",
+    "eslint": "^10.3.0",
+    "jsdom": "^28.0.0",
+    "ng-packagr": "^21.2.0",
+    "prettier": "^3.8.1",
+    "rxjs": "~7.8.0",
+    "typescript": "~5.9.2",
+    "typescript-eslint": "8.59.2",
+    "vitest": "^4.0.8"
+  }
+}

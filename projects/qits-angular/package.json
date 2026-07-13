@@ -1,0 +1,11 @@
+{
+  "name": "@qits/angular",
+  "version": "0.0.1",
+  "peerDependencies": {
+    "@angular/core": "^21.2.0"
+  },
+  "dependencies": {
+    "tslib": "^2.3.0"
+  },
+  "sideEffects": false
+}

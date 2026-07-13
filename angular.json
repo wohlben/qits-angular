@@ -1,0 +1,47 @@
+{
+  "$schema": "./node_modules/@angular/cli/lib/config/schema.json",
+  "version": 1,
+  "cli": {
+    "packageManager": "pnpm",
+    "schematicCollections": ["angular-eslint"]
+  },
+  "newProjectRoot": "projects",
+  "projects": {
+    "qits-angular": {
+      "projectType": "library",
+      "root": "projects/qits-angular",
+      "sourceRoot": "projects/qits-angular/src",
+      "prefix": "lib",
+      "architect": {
+        "build": {
+          "builder": "@angular/build:ng-packagr",
+          "configurations": {
+            "production": {
+              "tsConfig": "projects/qits-angular/tsconfig.lib.prod.json"
+            },
+            "development": {
+              "tsConfig": "projects/qits-angular/tsconfig.lib.json"
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "test": {
+          "builder": "@angular/build:unit-test",
+          "options": {
+            "tsConfig": "projects/qits-angular/tsconfig.spec.json"
+          }
+        },
+        "lint": {
+          "builder": "@angular-eslint/builder:lint",
+          "options": {
+            "lintFilePatterns": [
+              "projects/qits-angular/**/*.ts",
+              "projects/qits-angular/**/*.html"
+            ],
+            "eslintConfig": "projects/qits-angular/eslint.config.js"
+          }
+        }
+      }
+    }
+  }
+}
