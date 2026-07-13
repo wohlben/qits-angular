@@ -18,12 +18,19 @@ pnpm add "git+https://github.com/wohlben/qits-angular.git#<sha>"
 ```
 
 pnpm clones the repo, installs its devDependencies, runs `prepare` (which builds `dist/`), then
-packs using the `files` field. If pnpm 10 skips the build (lifecycle-script gating), add to the
-**consumer's** `package.json`:
+packs using the `files` field.
+
+**Required consumer-side step:** pnpm 10 gates dependency lifecycle scripts, and the git-dep
+`prepare` build is *not* auto-exempt (verified against pnpm 10.33.0 — the install fails with
+`ERR_PNPM_GIT_DEP_PREPARE_NOT_ALLOWED` otherwise). Allowlist this package in the **consumer's**
+`package.json`:
 
 ```json
 { "pnpm": { "onlyBuiltDependencies": ["@qits/angular"] } }
 ```
+
+(pnpm's error also accepts the same key in `pnpm-workspace.yaml`; the `package.json` form above is
+what this repo verified.)
 
 ## Usage
 
