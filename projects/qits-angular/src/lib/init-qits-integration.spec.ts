@@ -1,3 +1,4 @@
+import { captureRelay, isCaptureActive } from './capture-config';
 import {
   OTLP_PASSTHROUGH_URL_PATTERN,
   initQitsIntegration,
@@ -60,6 +61,34 @@ describe('initQitsIntegration', () => {
     await initQitsIntegration();
     await initQitsIntegration();
     expect(mock).toHaveBeenCalledTimes(1);
+  });
+
+  it('stashes the capture relay even when telemetry is dark (independently nullable)', async () => {
+    stubConfig({
+      telemetry: null,
+      capture: {
+        ingestUrl: 'http://qits:8080/api/capture',
+        resourceAttributes: { 'qits.repository.id': 'r1' },
+      },
+    });
+    await initQitsIntegration();
+    expect(isTelemetryActive()).toBe(false);
+    expect(isCaptureActive()).toBe(true);
+    expect(captureRelay()).toEqual({
+      ingestUrl: 'http://qits:8080/api/capture',
+      resourceAttributes: { 'qits.repository.id': 'r1' },
+    });
+  });
+
+  it('capture stays dark on capture: null and on a config without the section', async () => {
+    stubConfig({ telemetry: null, capture: null });
+    await initQitsIntegration();
+    expect(isCaptureActive()).toBe(false);
+
+    resetQitsIntegrationForTesting();
+    stubConfig({ telemetry: null });
+    await initQitsIntegration();
+    expect(isCaptureActive()).toBe(false);
   });
 
   it('goes lit on a relay: patches window.fetch (caller attribution + instrumentation)', async () => {

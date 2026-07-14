@@ -10,6 +10,7 @@ import {
   type RouterStateSnapshot,
 } from '@angular/router';
 import { trace, type Span } from '@opentelemetry/api';
+import { isCaptureActive } from './capture-config';
 import { isTelemetryActive } from './init-qits-integration';
 import { routeAttributes, setCurrentRoute } from './route-context';
 
@@ -21,7 +22,10 @@ import { routeAttributes, setCurrentRoute } from './route-context';
  */
 export function provideRouteTelemetry(): EnvironmentProviders {
   return provideAppInitializer(() => {
-    if (!isTelemetryActive()) {
+    // Also installed when only capture is lit: with no tracer provider registered the Navigation
+    // spans are global no-ops, but the setCurrentRoute tracking is what gives a capture payload
+    // its routePattern.
+    if (!isTelemetryActive() && !isCaptureActive()) {
       return;
     }
     installRouteTelemetry(inject(Router));

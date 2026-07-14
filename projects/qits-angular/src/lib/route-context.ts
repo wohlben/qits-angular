@@ -12,6 +12,11 @@ export function setCurrentRoute(route: { path?: string; url: string }): void {
   currentRoute = route;
 }
 
+/** The matched route pattern ("greeting/:name"), if a NavigationEnd has established one yet. */
+export function currentRoutePattern(): string | undefined {
+  return currentRoute.path;
+}
+
 export function routeAttributes(): Attributes {
   return {
     ...(currentRoute.path !== undefined && { 'app.route.path': currentRoute.path }),

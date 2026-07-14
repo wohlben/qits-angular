@@ -7,6 +7,7 @@ import { UserInteractionInstrumentation } from '@opentelemetry/instrumentation-u
 import { resourceFromAttributes } from '@opentelemetry/resources';
 import { BatchLogRecordProcessor, LoggerProvider } from '@opentelemetry/sdk-logs';
 import { BatchSpanProcessor, WebTracerProvider } from '@opentelemetry/sdk-trace-web';
+import { resetCaptureForTesting, setCaptureRelay } from './capture-config';
 import { installFetchCallerAttribution } from './fetch-caller-attribution';
 import { enrichInteractionSpan } from './interaction-telemetry';
 import { RouteStampingLogRecordProcessor, RouteStampingSpanProcessor } from './route-context';
@@ -71,7 +72,11 @@ export async function initQitsIntegration(options?: QitsIntegrationOptions): Pro
     if (!response.ok) {
       return;
     }
-    relay = (await response.json()).telemetry ?? null;
+    const config = await response.json();
+    // Independently nullable sections: capture can be lit while telemetry is dark (and vice
+    // versa), so stash it before the telemetry gate below.
+    setCaptureRelay(config.capture ?? null);
+    relay = config.telemetry ?? null;
   } catch {
     return; // telemetry is best-effort; never block the app
   }
@@ -139,4 +144,5 @@ export function resetQitsIntegrationForTesting(): void {
   initialized = false;
   telemetryActive = false;
   setErrorLogger(undefined);
+  resetCaptureForTesting();
 }

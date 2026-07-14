@@ -28,7 +28,17 @@
         "test": {
           "builder": "@angular/build:unit-test",
           "options": {
-            "tsConfig": "projects/qits-angular/tsconfig.spec.json"
+            "tsConfig": "projects/qits-angular/tsconfig.spec.json",
+            "exclude": ["projects/qits-angular/src/**/*.browser.spec.ts"]
+          }
+        },
+        "test-browser": {
+          "builder": "@angular/build:unit-test",
+          "options": {
+            "tsConfig": "projects/qits-angular/tsconfig.spec.json",
+            "browsers": ["chromium"],
+            "headless": true,
+            "include": ["projects/qits-angular/src/**/*.browser.spec.ts"]
           }
         },
         "lint": {

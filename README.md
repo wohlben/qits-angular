@@ -20,8 +20,13 @@ traces + logs through its own backend's passthrough:
 Everything is gated by the backend's `api/config.json` relay: an app running standalone (or with
 the qits daemon's otel toggle off) gets `telemetry: null` and the library stays **dark** — no SDK
 objects constructed, `window.fetch` untouched, inert dead weight. There is no build-time
-configuration; the config relay is the only runtime channel. Later plans add feature capture and
-state snapshots as `provideQitsIntegration(withFeature…)` arguments.
+configuration; the config relay is the only runtime channel.
+
+The library also ships **feature capture** (`withFeatureCapture()`): a floaty button that
+snapshots the running app — the rendered DOM with effective styles frozen inline, route, viewport
+metadata — POSTs it to qits' capture ingest, and lands the user in a freshly created qits
+workspace whose goal carries the captured context. Gated by the relay's `capture` section, same
+dark-by-default stance. Later plans add state snapshots the same way.
 
 ## Install
 
@@ -95,6 +100,30 @@ buttons):
 <form data-track-event="save-greeting" (ngSubmit)="submit()">…</form>
 ```
 
+### Feature capture
+
+```ts
+provideQitsIntegration(withFeatureCapture()),
+```
+
+renders a fixed bottom-left capture button (bottom-left so it never collides with qits' own
+bottom-right floaties when the app runs framed in the qits web view; styling is self-contained).
+The button appears only when the config relay reports a `capture` section (below). Pressing it is
+the whole gesture: spinner → document-scoped style freeze → gzip POST to the ingest → on `201`
+the **top** window navigates to the created workspace (so a capture from inside the qits web view
+lands the qits tab there, not the framed app). On failure: a retry-able toast, the app
+undisturbed.
+
+Bring your own trigger with `withFeatureCapture({ renderButton: false })` and the exported
+`captureNow(): Promise<{url}>` — it resolves instead of navigating. `maxDomBytes` (default 2 MB
+pre-compression) caps the frozen DOM; over it the snapshot truncates depth-first and sets
+`dom.truncated`. The freeze core is exported as `freezeDocument()` for reuse.
+
+Where the POST goes: framed under the qits daemon proxy (`/daemon/{ws}/{daemon}/` base) the frame
+origin *is* qits, so the button posts same-origin to `/api/capture`; everywhere else it uses the
+relayed `ingestUrl` verbatim — which must then be **browser-reachable** (deployed apps configure a
+public URL).
+
 ### The backend contract
 
 The library talks only to its own backend, base-relative (so it works at `/` and under the qits
@@ -103,8 +132,14 @@ web-view path prefix alike):
 - `GET api/config.json` — the identity relay. `{ "telemetry": null }` keeps the library dark;
   `{ "telemetry": { "serviceName": …, "resourceAttributes": … } }` lights it (the browser's
   service name gets a `-browser` suffix). Override the path via
-  `initQitsIntegration({ configUrl: … })`.
+  `initQitsIntegration({ configUrl: … })`. Feature capture reads its own independently-nullable
+  section from the same relay: `{ "capture": { "ingestUrl": …, "resourceAttributes": … } }` —
+  built from `QITS_CAPTURE_ENDPOINT` under a qits daemon, an `application.properties` value in a
+  deployed build; `capture: null` hides the button. The library self-stamps the relayed
+  `qits.repository.id`/`qits.workspace.id` into the payload; the ingest fails closed on identity
+  it can't resolve.
 - `POST api/otel/v1/{traces|logs}` — verbatim OTLP protobuf passthrough to the real collector.
+  (Capture has **no** passthrough: the browser posts straight to qits' CORS-open ingest URL.)
 
 Both resources are small app-side copies for Quarkus backends — see the
 [qits integration guide](https://github.com/wohlben/qits/blob/main/docs/guides/quarkus-angular-integration.md)
@@ -164,6 +199,7 @@ pnpm ng build
 | Command | What it does |
 | --- | --- |
 | `pnpm build` | `ng build qits-angular` → APF output in `dist/qits-angular/` |
-| `pnpm test` | `ng test qits-angular` (vitest builder) |
+| `pnpm test` | `ng test qits-angular` (vitest builder, jsdom) |
+| `pnpm test:browser` | `*.browser.spec.ts` in headless Chromium (style freezing needs a real layout engine); needs a one-time `pnpm exec playwright install chromium` |
 | `pnpm lint` | `ng lint qits-angular` |
 | `pnpm check-exports` | verify root manifest mirrors `dist/qits-angular/package.json` |
