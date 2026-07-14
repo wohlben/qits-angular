@@ -2,6 +2,7 @@ import type { CapturePayload } from './capture-payload';
 import {
   CaptureError,
   DAEMON_BASE_PATTERN,
+  captureApiAvailable,
   captureTargetUrl,
   postCapture,
 } from './capture-transport';
@@ -50,6 +51,37 @@ describe('captureTargetUrl', () => {
   it('the daemon base needs both segments', () => {
     expect(DAEMON_BASE_PATTERN.test('/daemon/only-one/')).toBe(false);
     expect(DAEMON_BASE_PATTERN.test('/daemon/ws/d1/')).toBe(true);
+  });
+});
+
+describe('captureApiAvailable', () => {
+  let originalFetch: typeof fetch;
+
+  beforeEach(() => {
+    originalFetch = window.fetch;
+  });
+
+  afterEach(() => {
+    window.fetch = originalFetch;
+  });
+
+  it('is available when the target answers the OPTIONS probe (qits CORS route: 204)', async () => {
+    const mock = vi.fn().mockResolvedValue({ ok: true, status: 204 });
+    window.fetch = mock as unknown as typeof fetch;
+    await expect(captureApiAvailable(RELAY)).resolves.toBe(true);
+    expect(mock).toHaveBeenCalledWith(RELAY.ingestUrl, { method: 'OPTIONS' });
+  });
+
+  it('is unavailable on a 404 (backend without the ingest)', async () => {
+    window.fetch = vi
+      .fn()
+      .mockResolvedValue({ ok: false, status: 404 }) as unknown as typeof fetch;
+    await expect(captureApiAvailable(RELAY)).resolves.toBe(false);
+  });
+
+  it('is unavailable when the target is unreachable', async () => {
+    window.fetch = vi.fn().mockRejectedValue(new Error('offline')) as unknown as typeof fetch;
+    await expect(captureApiAvailable(RELAY)).resolves.toBe(false);
   });
 });
 

@@ -56,7 +56,9 @@ style:
 - `capture-transport.ts` — framed under the daemon proxy (`/daemon/{ws}/{d}/` base) the frame
   origin IS qits, so POST same-origin `/api/capture`; else the relayed `ingestUrl` verbatim
   (container-reachable ≠ browser-reachable is the consumer's problem then). Gzip is buffered,
-  not streamed — streaming fetch bodies need `duplex`.
+  not streamed — streaming fetch bodies need `duplex`. `captureApiAvailable()` probes the same
+  target with a bare `OPTIONS` before the button mounts: 204 (qits' CORS route) ⇒ show, 404 or
+  unreachable ⇒ stay hidden — the relay proves intent, the probe proves the POST would land.
 - `capture-navigation.ts` — `window.top.location.assign` behind a seam (unstubable in browser
   specs); **top** window so a capture from inside the qits web view lands the qits tab on the
   new workspace.

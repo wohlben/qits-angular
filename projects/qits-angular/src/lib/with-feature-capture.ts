@@ -7,8 +7,9 @@ import {
   provideEnvironmentInitializer,
 } from '@angular/core';
 import { QitsCaptureButton } from './capture-button.component';
-import { captureOptions, isCaptureActive, setCaptureOptions } from './capture-config';
+import { captureOptions, captureRelay, setCaptureOptions } from './capture-config';
 import type { CaptureFeatureOptions } from './capture-config';
+import { captureApiAvailable } from './capture-transport';
 import type { QitsIntegrationFeature } from './provide-qits-integration';
 
 /**
@@ -40,11 +41,17 @@ export function withFeatureCapture(options?: CaptureFeatureOptions): QitsIntegra
 let mounted = false;
 
 /** Exported for specs; not part of the public API. */
-export function mountCaptureButton(
+export async function mountCaptureButton(
   appRef: ApplicationRef,
   environmentInjector: EnvironmentInjector,
-): void {
-  if (mounted || !isCaptureActive() || !captureOptions().renderButton) {
+): Promise<void> {
+  const relay = captureRelay();
+  if (mounted || !relay || !captureOptions().renderButton) {
+    return;
+  }
+  // The relay proves intent; the OPTIONS probe proves the ingest exists AND is reachable from
+  // this browser (a 404-ing or unreachable target keeps the button hidden instead of doomed).
+  if (!(await captureApiAvailable(relay)) || mounted) {
     return;
   }
   mounted = true;

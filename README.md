@@ -108,7 +108,10 @@ provideQitsIntegration(withFeatureCapture()),
 
 renders a fixed bottom-left capture button (bottom-left so it never collides with qits' own
 bottom-right floaties when the app runs framed in the qits web view; styling is self-contained).
-The button appears only when the config relay reports a `capture` section (below). Pressing it is
+The button appears only when the config relay reports a `capture` section (below) **and** the
+ingest answers an `OPTIONS` availability probe — qits' CORS route replies 204 where the API
+exists; a backend without it 404s and an unreachable target throws, both of which keep the
+button hidden instead of doomed. Pressing it is
 the whole gesture: spinner → document-scoped style freeze → gzip POST to the ingest → on `201`
 the **top** window navigates to the created workspace (so a capture from inside the qits web view
 lands the qits tab there, not the framed app). On failure: a retry-able toast, the app

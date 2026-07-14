@@ -22,6 +22,20 @@ export function captureTargetUrl(relay: CaptureRelay): string {
   return relay.ingestUrl;
 }
 
+/**
+ * Probe the capture ingest with a bare OPTIONS: qits' CORS route answers 204 where the API
+ * exists; a backend without it 404s and an unreachable host throws — both mean "hide the
+ * button". A relayed config section proves intent, this proves the POST would actually land.
+ */
+export async function captureApiAvailable(relay: CaptureRelay): Promise<boolean> {
+  try {
+    const response = await fetch(captureTargetUrl(relay), { method: 'OPTIONS' });
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+
 export class CaptureError extends Error {}
 
 /** Gzip-POST the payload; resolves the created workspace's browser URL from the 201 body. */
