@@ -8,3 +8,6 @@ export { captureNow } from './lib/capture-now';
 export type { CaptureResult } from './lib/capture-now';
 export { freezeDocument } from './lib/document-freeze';
 export type { FrozenDocument } from './lib/document-freeze';
+export { withQitsSnapshot } from './lib/with-qits-snapshot';
+export { registerCaptureState } from './lib/capture-state';
+export type { CaptureStateSupplier } from './lib/capture-state';

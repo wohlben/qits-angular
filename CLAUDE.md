@@ -2,10 +2,11 @@
 
 The integration library for Angular apps managed by [qits](https://github.com/wohlben/qits):
 config.json-gated browser OTEL telemetry (traces + logs, route/interaction/caller enrichment,
-error shipping) and feature capture (`withFeatureCapture()` — a floaty button that style-freezes
+error shipping), feature capture (`withFeatureCapture()` — a floaty button that style-freezes
 the page, POSTs it to qits' capture ingest, and navigates the top window to the created
-workspace). Later qits plans add state snapshots as further `provideQitsIntegration(withFeature…)`
-arguments. See `README.md` for the consumer contract.
+workspace), and state snapshots (`withQitsSnapshot('name')` on an `@ngrx/signals` store, or
+`registerCaptureState()` for anything else — registered state rides the capture payload's
+`state` field into the workspace goal). See `README.md` for the consumer contract.
 
 ## Shape of the integration (traps are load-bearing — don't "clean them up")
 
@@ -66,6 +67,25 @@ style:
   initializer cannot inject the still-under-construction `ApplicationRef`), `createComponent` +
   `appRef.attachView` + append to `document.body`. The button host carries
   `data-qits-pick-overlay`: excluded from its own freeze *and* from qits' element picker.
+
+State snapshots (qits' `docs/features/2026-07-14_capture-state-snapshot.md`):
+
+- `capture-state.ts` — module-level `Map` of named suppliers (registration can predate DI and
+  any capture); suppliers run lazily at capture time only. Duplicate name: warn + last-wins.
+  The unregister fn is **identity-guarded** — it deletes only if the map still holds *its own*
+  supplier, so a stale destroy after a hot-reload re-registration can't tear down the live one.
+  Per-entry try/catch (covering the sanitizer walk — object getters can throw mid-enumeration)
+  → `{$error}`; per-entry 64 kB cap → wholesale `{$truncated, bytes}` replacement.
+- `capture-state-sanitize.ts` — JSON-safe sanitizer: depth 8, ancestor-path (not visited-set)
+  cycle detection so shared DAG references still serialize, `Map`/`Set`/`Date` converted,
+  everything non-plain → `"$unserializable(<type>)"`. **BigInt → string is load-bearing**: it is
+  the one value `JSON.stringify` *throws* on, and the payload-level stringify in
+  capture-transport must never throw.
+- `with-qits-snapshot.ts` — `signalStoreFeature` registering `() => getState(store)`.
+  Registration happens in `onInit`, **not** the `withHooks` factory body (the factory runs
+  mid-store-construction); `onDestroy` unregisters. The supplier is injection-context-free
+  (`getState` is a pure signal read). `@ngrx/signals` is a required peer — the FESM imports it
+  statically, so every consumer must resolve it even without using the feature.
 
 The library is **zoneless-first**: no `zone.js`, no `@opentelemetry/context-zone` — the default
 stack context manager is correct. The `instrumentation-user-interaction` `zone.js` peer is

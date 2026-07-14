@@ -1,4 +1,5 @@
 import { buildCapturePayload } from './capture-payload';
+import { registerCaptureState, resetCaptureStateForTesting } from './capture-state';
 import { resetRouteContextForTesting, setCurrentRoute } from './route-context';
 
 const RELAY = {
@@ -23,6 +24,7 @@ describe('buildCapturePayload', () => {
     baseTag = undefined;
     history.replaceState(null, '', originalPath);
     resetRouteContextForTesting();
+    resetCaptureStateForTesting();
   });
 
   function setBase(href: string): void {
@@ -78,5 +80,16 @@ describe('buildCapturePayload', () => {
     expect(payload.environment.prefersColorScheme).toBe('dark');
     expect(payload.dom).toBe(DOM);
     expect(new Date(payload.capturedAt).getTime()).not.toBeNaN();
+  });
+
+  it('omits state entirely when nothing is registered', () => {
+    expect('state' in buildCapturePayload(DOM, RELAY)).toBe(false);
+  });
+
+  it('carries registered state, sanitized, under its registration name', () => {
+    registerCaptureState('greetingHistory', () => ({ greetings: ['anna'], when: new Map() }));
+    expect(buildCapturePayload(DOM, RELAY).state).toEqual({
+      greetingHistory: { greetings: ['anna'], when: {} },
+    });
   });
 });

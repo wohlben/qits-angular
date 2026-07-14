@@ -2,7 +2,7 @@
   "name": "@qits/angular",
   "version": "0.0.1",
   "private": true,
-  "description": "qits integration for Angular apps: config.json-gated OTEL telemetry (traces, logs, route/interaction/caller enrichment), later feature capture and state snapshots.",
+  "description": "qits integration for Angular apps: config.json-gated OTEL telemetry (traces, logs, route/interaction/caller enrichment), feature capture, and state snapshots.",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -30,7 +30,8 @@
   "sideEffects": false,
   "peerDependencies": {
     "@angular/core": "^21.2.0",
-    "@angular/router": "^21.2.0"
+    "@angular/router": "^21.2.0",
+    "@ngrx/signals": "^21.0.0"
   },
   "dependencies": {
     "@opentelemetry/api": "^1.9.1",
@@ -69,6 +70,7 @@
     "@angular/platform-browser": "^21.2.0",
     "@angular/router": "^21.2.0",
     "@eslint/js": "^10.0.1",
+    "@ngrx/signals": "^21.1.0",
     "@vitest/browser": "^4.1.9",
     "@vitest/browser-playwright": "^4.1.9",
     "angular-eslint": "21.4.0",

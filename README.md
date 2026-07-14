@@ -26,7 +26,9 @@ The library also ships **feature capture** (`withFeatureCapture()`): a floaty bu
 snapshots the running app — the rendered DOM with effective styles frozen inline, route, viewport
 metadata — POSTs it to qits' capture ingest, and lands the user in a freshly created qits
 workspace whose goal carries the captured context. Gated by the relay's `capture` section, same
-dark-by-default stance. Later plans add state snapshots the same way.
+dark-by-default stance. **State snapshots** ride along: state the app registers (one line per
+`@ngrx/signals` store via `withQitsSnapshot`, or `registerCaptureState` for anything else) lands
+in the capture's goal as JSON — what the app *knew*, not just what it rendered.
 
 ## Install
 
@@ -38,6 +40,10 @@ pnpm add "git+https://github.com/wohlben/qits-angular.git#<sha>"
 
 pnpm clones the repo, installs its devDependencies, runs `prepare` (which builds `dist/`), then
 packs using the `files` field.
+
+**Peers:** `@angular/core`, `@angular/router`, and `@ngrx/signals` (^21). The ngrx peer is
+required even if you never call `withQitsSnapshot` — the library's single bundle imports it
+statically, so it must be resolvable in every consumer.
 
 **Required consumer-side step:** pnpm 10 gates dependency lifecycle scripts, and the git-dep
 `prepare` build is *not* auto-exempt (verified against pnpm 10.33.0 — the install fails with
@@ -126,6 +132,41 @@ Where the POST goes: framed under the qits daemon proxy (`/daemon/{ws}/{daemon}/
 origin *is* qits, so the button posts same-origin to `/api/capture`; everywhere else it uses the
 relayed `ingestUrl` verbatim — which must then be **browser-reachable** (deployed apps configure a
 public URL).
+
+### State snapshots
+
+A frozen DOM shows the symptom; state shows the cause. Registered state is serialized into the
+capture payload's `state` field and rendered as JSON in the workspace goal. For an
+`@ngrx/signals` store, one self-registering line:
+
+```ts
+export const CartStore = signalStore(
+  { providedIn: 'root' },
+  withState(initialCart),
+  withQitsSnapshot('cart'),   // registers on init, unregisters on destroy
+);
+```
+
+Only `withState` slices are captured (computeds are derivable and excluded). For everything else
+— plain signals, services, anything callable — the escape hatch:
+
+```ts
+const unregister = registerCaptureState('session', () => ({ user: auth.user()?.name ?? null }));
+```
+
+Suppliers run **lazily at capture time only**: zero cost until the button is pressed, and the
+snapshot is of that moment. Captures never fail because of one bad store — a throwing supplier
+contributes `{"$error": …}`, and every value passes a JSON-safe sanitizer: depth cap 8
+(`"$depth-capped"`), 64 kB per entry (`{"$truncated": true}`), cycles → `"$circular"`,
+functions / DOM nodes / class instances / typed arrays → `"$unserializable(<type>)"`, `Map`/`Set`
+converted, `Date` → ISO string, `BigInt` → decimal string.
+
+**Redaction is your job.** The library cannot guess what is sensitive — register a projection
+instead of the raw state:
+
+```ts
+registerCaptureState('profile', () => ({ ...getState(store), token: undefined }));
+```
 
 ### The backend contract
 

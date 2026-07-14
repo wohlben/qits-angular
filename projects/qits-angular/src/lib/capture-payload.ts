@@ -1,4 +1,5 @@
 import type { CaptureRelay } from './capture-config';
+import { collectCaptureState } from './capture-state';
 import type { FrozenDocument } from './document-freeze';
 import { currentRoutePattern } from './route-context';
 
@@ -30,9 +31,12 @@ export interface CapturePayload {
     truncated: boolean;
     bytes: number;
   };
+  /** Registered app state ({name: snapshot}); absent when nothing is registered. */
+  state?: Record<string, unknown>;
 }
 
 export function buildCapturePayload(dom: FrozenDocument, relay: CaptureRelay): CapturePayload {
+  const state = collectCaptureState();
   return {
     capturedAt: new Date().toISOString(),
     identity: {
@@ -55,6 +59,7 @@ export function buildCapturePayload(dom: FrozenDocument, relay: CaptureRelay): C
       prefersColorScheme: matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light',
     },
     dom,
+    ...(state !== undefined && { state }),
   };
 }
 
