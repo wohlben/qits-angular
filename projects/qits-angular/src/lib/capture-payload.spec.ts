@@ -86,6 +86,22 @@ describe('buildCapturePayload', () => {
     expect('state' in buildCapturePayload(DOM, RELAY)).toBe(false);
   });
 
+  it('omits selection when no pick is supplied', () => {
+    expect('selection' in buildCapturePayload(DOM, RELAY)).toBe(false);
+  });
+
+  it('carries the supplied selection verbatim', () => {
+    const selection = {
+      html: '<app-card>frozen</app-card>',
+      truncated: false,
+      bytes: 27,
+      selector: '#go',
+      tag: 'button',
+      component: 'app-card',
+    };
+    expect(buildCapturePayload(DOM, RELAY, selection).selection).toBe(selection);
+  });
+
   it('carries registered state, sanitized, under its registration name', () => {
     registerCaptureState('greetingHistory', () => ({ greetings: ['anna'], when: new Map() }));
     expect(buildCapturePayload(DOM, RELAY).state).toEqual({

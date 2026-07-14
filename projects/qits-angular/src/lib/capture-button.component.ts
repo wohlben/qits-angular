@@ -1,16 +1,21 @@
 import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
 import { navigateTop } from './capture-navigation';
 import { captureNow } from './capture-now';
+import { pickElement } from './element-picker';
 
 /**
- * The floaty capture button: press → spinner → snapshot → POST → navigate the top window to the
- * created workspace. Bottom-LEFT, to avoid colliding with qits' own bottom-right floaties when
- * the app runs framed in the web view. Styles are self-contained — no dependency on the host
- * app's CSS framework. The press is the whole gesture: no input, no dialog; on failure a
- * retry-able toast, the app undisturbed.
+ * The floaty capture button: press → pick an element → spinner → snapshot → POST → navigate the
+ * top window to the created workspace. Bottom-LEFT, to avoid colliding with qits' own bottom-right
+ * floaties when the app runs framed in the web view. Styles are self-contained — no dependency on
+ * the host app's CSS framework. On failure a retry-able toast, the app undisturbed.
+ *
+ * The press arms an in-app element picker (see pickElement): the user clicks the element to submit,
+ * and its owning `app-*` component is frozen alongside the whole page. Escape or a right-click
+ * cancels back to idle.
  *
  * The host carries data-qits-pick-overlay so the frozen snapshot excludes the button itself —
- * and, reusing the picker's convention, qits' element picker skips it too.
+ * and, reusing the picker's convention, both this button's own picker and qits' element picker
+ * skip it too.
  */
 @Component({
   selector: 'qits-capture-button',
@@ -24,7 +29,8 @@ import { captureNow } from './capture-now';
       type="button"
       class="qits-capture-button"
       [class.qits-capture-busy]="state() === 'busy'"
-      [disabled]="state() === 'busy'"
+      [class.qits-capture-picking]="state() === 'picking'"
+      [disabled]="state() === 'busy' || state() === 'picking'"
       (click)="capture()"
       aria-label="Capture this page into qits"
       title="Capture this page into qits"
@@ -73,6 +79,10 @@ import { captureNow } from './capture-now';
     .qits-capture-busy {
       cursor: wait;
     }
+    .qits-capture-picking {
+      background: #2563eb;
+      cursor: crosshair;
+    }
     .qits-capture-spinner {
       width: 18px;
       height: 18px;
@@ -99,12 +109,21 @@ import { captureNow } from './capture-now';
   `,
 })
 export class QitsCaptureButton {
-  protected readonly state = signal<'idle' | 'busy' | 'error'>('idle');
+  protected readonly state = signal<'idle' | 'picking' | 'busy' | 'error'>('idle');
 
   protected async capture(): Promise<void> {
+    if (this.state() === 'busy' || this.state() === 'picking') {
+      return;
+    }
+    this.state.set('picking');
+    const target = await pickElement(document);
+    if (!target) {
+      this.state.set('idle'); // Escape / right-click cancelled the pick — no capture
+      return;
+    }
     this.state.set('busy');
     try {
-      const result = await captureNow();
+      const result = await captureNow(target);
       navigateTop(result.url);
       this.state.set('idle');
     } catch {

@@ -47,13 +47,23 @@ style:
   before DI exists); `isCaptureActive()` is the gate for the button, `captureNow()`, and the
   widened route-telemetry initializer (route *tracking* is needed even when telemetry is dark —
   the Navigation spans are global no-ops without a tracer provider).
-- `document-freeze.ts` — document-scoped sibling of the qits webui's element-scoped
+- `document-freeze.ts` — subtree style-freeze, sibling of the qits webui's element-scoped
   `style-freeze.ts` (same algorithm: stylesheet-free **off-screen, never display:none** baseline
   iframe, per-tag UA-default snapshot, inline only diffs). Adds: baseline iframe inside the
   captured document itself (marked `data-qits-pick-overlay` so the walk drops it), scroll/form
   state reflected into attributes, canvas → data-URL `<img>`, and a depth-first byte-budget
-  truncation. Needs a real layout engine → tested in `*.browser.spec.ts` (headless Chromium),
-  never jsdom.
+  truncation. Two entry points over one core: `freezeDocument()` freezes the page's **`<body>`
+  only** (head/stylesheets/scripts dropped — styles are already inlined), `freezeElement()`
+  freezes a single subtree (the picked component). Needs a real layout engine → tested in
+  `*.browser.spec.ts` (headless Chromium), never jsdom.
+- `element-picker.ts` / `app-component.ts` / `element-selector.ts` — the pick gesture the button
+  now opens (see below). `pickElement(document)` is the in-app, same-realm analogue of the qits
+  webui's cross-iframe `DomPicker`: overlay + hint (both `data-qits-pick-overlay`), capture-phase
+  listeners so the pick click never reaches the app, single-shot resolve, Escape/right-click →
+  `undefined`. `nearestAppComponent()` climbs to the closest ancestor-or-self whose tag starts
+  with `app-` — the subtree `captureNow(target)` freezes as the payload's `selection` (the pick
+  and everything around it, trimmed to the component boundary; falls back to the picked element).
+  `selectorFor()` (ported from the webui picker) records the pick's provenance.
 - `capture-transport.ts` — framed under the daemon proxy (`/daemon/{ws}/{d}/` base) the frame
   origin IS qits, so POST same-origin `/api/capture`; else the relayed `ingestUrl` verbatim
   (container-reachable ≠ browser-reachable is the consumer's problem then). Gzip is buffered,
@@ -63,10 +73,14 @@ style:
 - `capture-navigation.ts` — `window.top.location.assign` behind a seam (unstubable in browser
   specs); **top** window so a capture from inside the qits web view lands the qits tab on the
   new workspace.
-- `with-feature-capture.ts` — the button mounts via `APP_BOOTSTRAP_LISTENER` (an app
-  initializer cannot inject the still-under-construction `ApplicationRef`), `createComponent` +
-  `appRef.attachView` + append to `document.body`. The button host carries
-  `data-qits-pick-overlay`: excluded from its own freeze *and* from qits' element picker.
+- `with-feature-capture.ts` / `capture-button.component.ts` — the button mounts via
+  `APP_BOOTSTRAP_LISTENER` (an app initializer cannot inject the still-under-construction
+  `ApplicationRef`), `createComponent` + `appRef.attachView` + append to `document.body`. The
+  button host carries `data-qits-pick-overlay`: excluded from its own freeze, from its own picker,
+  *and* from qits' element picker. The press is a two-step gesture: `idle → picking` (arms
+  `pickElement`) → on pick `busy` (`captureNow(target)` → navigate), on Escape/right-click back to
+  `idle`. `captureNow(target?)` stays public and target-optional — a `renderButton: false` trigger
+  can capture with no pick (whole-body snapshot, no `selection`).
 
 State snapshots (qits' `docs/features/2026-07-14_capture-state-snapshot.md`):
 

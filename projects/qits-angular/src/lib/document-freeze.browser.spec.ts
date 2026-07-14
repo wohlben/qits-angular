@@ -1,4 +1,4 @@
-import { freezeDocument } from './document-freeze';
+import { freezeDocument, freezeElement } from './document-freeze';
 
 /**
  * Style freezing needs a real layout engine (jsdom computes no styles), so this runs in Vitest
@@ -120,5 +120,40 @@ describe('freezeDocument', () => {
     expect(capped.truncated).toBe(true);
     expect(uncapped.truncated).toBe(false);
     expect(capped.bytes).toBeLessThan(uncapped.bytes);
+  });
+
+  it('trims to the body — the head, its stylesheets and scripts, are dropped', async () => {
+    const iframe = await frameWith(
+      '<head><title>t</title><style>p { color: red }</style></head>' +
+        '<body><p>content</p></body>',
+    );
+    const frozen = freezeDocument(iframe.contentDocument!)!;
+    expect(frozen.html.startsWith('<!doctype html><body')).toBe(true);
+    expect(frozen.html).not.toContain('<head');
+    expect(frozen.html).not.toContain('<title');
+    expect(frozen.html).not.toContain('<style');
+    expect(frozen.html).toContain('<p');
+  });
+});
+
+describe('freezeElement', () => {
+  afterEach(() => {
+    document.querySelectorAll('iframe').forEach((f) => f.remove());
+  });
+
+  it('freezes just the element subtree (no document wrapper) with its applied styles', async () => {
+    const iframe = await frameWith(
+      '<style>.badge { color: rgb(0, 128, 0); font-weight: 700 }</style>' +
+        '<app-widget><span class="badge">hi</span></app-widget><footer>outside</footer>',
+    );
+    const widget = iframe.contentDocument!.querySelector('app-widget')!;
+
+    const frozen = freezeElement(widget)!;
+    expect(frozen.html.startsWith('<app-widget')).toBe(true);
+    expect(frozen.html).not.toContain('<!doctype');
+    expect(frozen.html).not.toContain('footer'); // only the subtree, not the siblings around it
+    expect(frozen.html).toContain('color: rgb(0, 128, 0)');
+    expect(frozen.html).toContain('font-weight: 700');
+    expect(frozen.bytes).toBe(new TextEncoder().encode(frozen.html).length);
   });
 });

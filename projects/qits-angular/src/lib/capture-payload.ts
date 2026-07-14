@@ -31,11 +31,33 @@ export interface CapturePayload {
     truncated: boolean;
     bytes: number;
   };
+  /**
+   * The style-frozen subtree the user picked (the nearest enclosing `app-*` component); absent when
+   * the capture carried no pick (e.g. a custom trigger firing captureNow() with no target).
+   */
+  selection?: CaptureSelection;
   /** Registered app state ({name: snapshot}); absent when nothing is registered. */
   state?: Record<string, unknown>;
 }
 
-export function buildCapturePayload(dom: FrozenDocument, relay: CaptureRelay): CapturePayload {
+/** The picked component's frozen subtree plus the provenance of the pick that produced it. */
+export interface CaptureSelection {
+  html: string;
+  truncated: boolean;
+  bytes: number;
+  /** CSS selector of the element the user actually clicked. */
+  selector: string;
+  /** Tag of the picked element (lowercase). */
+  tag: string;
+  /** The `app-*` component tag whose subtree was frozen, or null when none enclosed the pick. */
+  component: string | null;
+}
+
+export function buildCapturePayload(
+  dom: FrozenDocument,
+  relay: CaptureRelay,
+  selection?: CaptureSelection,
+): CapturePayload {
   const state = collectCaptureState();
   return {
     capturedAt: new Date().toISOString(),
@@ -59,6 +81,7 @@ export function buildCapturePayload(dom: FrozenDocument, relay: CaptureRelay): C
       prefersColorScheme: matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light',
     },
     dom,
+    ...(selection !== undefined && { selection }),
     ...(state !== undefined && { state }),
   };
 }

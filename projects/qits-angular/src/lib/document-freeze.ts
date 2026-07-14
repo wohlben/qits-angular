@@ -1,7 +1,7 @@
 import { DEFAULT_MAX_DOM_BYTES } from './capture-config';
 
 /**
- * Freezes a whole document into a self-contained HTML string: a deep clone where every element
+ * Freezes a DOM subtree into a self-contained HTML string: a deep clone where every element
  * carries the styles it effectively had (author rules, inheritance, inline styles) as inline
  * `style` attributes — so the snapshot renders alike without the page's stylesheets. To keep the
  * output readable, only properties whose computed value differs from the tag's bare UA default
@@ -10,11 +10,11 @@ import { DEFAULT_MAX_DOM_BYTES } from './capture-config';
  * them away).
  *
  * The document-scoped sibling of the qits webui's element-scoped style-freeze.ts (the element
- * picker) — same algorithm, plus what a whole-page snapshot needs: the baseline iframe lives in
- * the captured document itself (there is no parent document here), scroll positions and form
- * state are reflected into attributes (a frozen DOM otherwise renders at scroll zero with empty
- * inputs), canvases become data-URL images, and a byte budget truncates depth-first (a capped
- * snapshot beats a failed POST).
+ * picker) — same algorithm, plus what a snapshot needs: the baseline iframe lives in the captured
+ * document itself (there is no parent document here), scroll positions and form state are
+ * reflected into attributes (a frozen DOM otherwise renders at scroll zero with empty inputs),
+ * canvases become data-URL images, and a byte budget truncates depth-first (a capped snapshot
+ * beats a failed POST).
  */
 export interface FrozenDocument {
   html: string;
@@ -24,10 +24,44 @@ export interface FrozenDocument {
   bytes: number;
 }
 
+/**
+ * Freezes the whole page — but only its `<body>`. The `<head>` (stylesheets, scripts, meta) is
+ * dropped: styles are already inlined onto every node, and scripts are inert dead weight in a
+ * snapshot. The output is a renderable minimal document (`<!doctype html>` + the frozen body).
+ */
 export function freezeDocument(
   doc: Document,
   options?: { maxBytes?: number },
 ): FrozenDocument | undefined {
+  if (!doc.body) {
+    return undefined;
+  }
+  const frozen = freezeSubtree(doc, doc.body, options);
+  return frozen && finalize('<!doctype html>' + frozen.outerHTML, frozen.truncated);
+}
+
+/**
+ * Freezes a single element's subtree (the capture's picked component) — the same algorithm as
+ * {@link freezeDocument}, emitting the bare frozen fragment (no document wrapper).
+ */
+export function freezeElement(
+  element: Element,
+  options?: { maxBytes?: number },
+): FrozenDocument | undefined {
+  const frozen = freezeSubtree(element.ownerDocument, element, options);
+  return frozen && finalize(frozen.outerHTML, frozen.truncated);
+}
+
+function finalize(html: string, truncated: boolean): FrozenDocument {
+  return { html, truncated, bytes: new TextEncoder().encode(html).length };
+}
+
+/** Clones and style-freezes `root` (within `doc`), returning the frozen clone + truncation flag. */
+function freezeSubtree(
+  doc: Document,
+  root: Element,
+  options?: { maxBytes?: number },
+): { outerHTML: string; truncated: boolean } | undefined {
   const view = doc.defaultView;
   if (!view || !doc.body) {
     return undefined;
@@ -47,7 +81,6 @@ export function freezeDocument(
     if (!baselineDoc?.body) {
       return undefined;
     }
-    const root = doc.documentElement;
     const clone = root.cloneNode(true) as Element;
     const ctx: FreezeContext = {
       view,
@@ -58,8 +91,7 @@ export function freezeDocument(
       truncated: false,
     };
     freezeInto(root, clone, ctx);
-    const html = '<!doctype html>' + clone.outerHTML;
-    return { html, truncated: ctx.truncated, bytes: new TextEncoder().encode(html).length };
+    return { outerHTML: clone.outerHTML, truncated: ctx.truncated };
   } catch {
     return undefined; // best-effort: a failed freeze must never break the app
   } finally {
