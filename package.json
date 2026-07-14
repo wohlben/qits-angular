@@ -6,25 +6,25 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/wohlben/qits-angular.git"
+    "url": "https://github.com/wohlben/qits-angular-integration.git"
   },
   "packageManager": "pnpm@10.33.0",
   "scripts": {
     "ng": "ng",
-    "build": "ng build qits-angular",
-    "test": "ng test qits-angular",
-    "test:browser": "ng run qits-angular:test-browser",
-    "lint": "ng lint qits-angular",
+    "build": "ng build qits-angular-integration",
+    "test": "ng test qits-angular-integration",
+    "test:browser": "ng run qits-angular-integration:test-browser",
+    "lint": "ng lint qits-angular-integration",
     "check-exports": "node scripts/check-exports.mjs",
-    "prepare": "ng build qits-angular && node scripts/check-exports.mjs"
+    "prepare": "ng build qits-angular-integration && node scripts/check-exports.mjs"
   },
   "files": [
-    "dist/qits-angular"
+    "dist/qits-angular-integration"
   ],
   "exports": {
     ".": {
-      "types": "./dist/qits-angular/types/qits-angular.d.ts",
-      "default": "./dist/qits-angular/fesm2022/qits-angular.mjs"
+      "types": "./dist/qits-angular-integration/types/qits-angular.d.ts",
+      "default": "./dist/qits-angular-integration/fesm2022/qits-angular.mjs"
     }
   },
   "sideEffects": false,

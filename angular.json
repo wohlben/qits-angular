@@ -7,20 +7,20 @@
   },
   "newProjectRoot": "projects",
   "projects": {
-    "qits-angular": {
+    "qits-angular-integration": {
       "projectType": "library",
-      "root": "projects/qits-angular",
-      "sourceRoot": "projects/qits-angular/src",
+      "root": "projects/qits-angular-integration",
+      "sourceRoot": "projects/qits-angular-integration/src",
       "prefix": "lib",
       "architect": {
         "build": {
           "builder": "@angular/build:ng-packagr",
           "configurations": {
             "production": {
-              "tsConfig": "projects/qits-angular/tsconfig.lib.prod.json"
+              "tsConfig": "projects/qits-angular-integration/tsconfig.lib.prod.json"
             },
             "development": {
-              "tsConfig": "projects/qits-angular/tsconfig.lib.json"
+              "tsConfig": "projects/qits-angular-integration/tsconfig.lib.json"
             }
           },
           "defaultConfiguration": "production"
@@ -28,27 +28,27 @@
         "test": {
           "builder": "@angular/build:unit-test",
           "options": {
-            "tsConfig": "projects/qits-angular/tsconfig.spec.json",
-            "exclude": ["projects/qits-angular/src/**/*.browser.spec.ts"]
+            "tsConfig": "projects/qits-angular-integration/tsconfig.spec.json",
+            "exclude": ["projects/qits-angular-integration/src/**/*.browser.spec.ts"]
           }
         },
         "test-browser": {
           "builder": "@angular/build:unit-test",
           "options": {
-            "tsConfig": "projects/qits-angular/tsconfig.spec.json",
+            "tsConfig": "projects/qits-angular-integration/tsconfig.spec.json",
             "browsers": ["chromium"],
             "headless": true,
-            "include": ["projects/qits-angular/src/**/*.browser.spec.ts"]
+            "include": ["projects/qits-angular-integration/src/**/*.browser.spec.ts"]
           }
         },
         "lint": {
           "builder": "@angular-eslint/builder:lint",
           "options": {
             "lintFilePatterns": [
-              "projects/qits-angular/**/*.ts",
-              "projects/qits-angular/**/*.html"
+              "projects/qits-angular-integration/**/*.ts",
+              "projects/qits-angular-integration/**/*.html"
             ],
-            "eslintConfig": "projects/qits-angular/eslint.config.js"
+            "eslintConfig": "projects/qits-angular-integration/eslint.config.js"
           }
         }
       }

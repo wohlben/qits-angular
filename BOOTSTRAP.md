@@ -2,7 +2,7 @@
 
 > **How to use this document:** it lives as plan 0 in the qits repo
 > (`docs/feature-ideas/angular-lib-repo-bootstrap-0.md`) and is written to be **copied into the
-> `wohlben/qits-angular` repository** (as `BOOTSTRAP.md`) **and executed by a coding agent
+> `wohlben/qits-angular-integration` repository** (as `BOOTSTRAP.md`) **and executed by a coding agent
 > there**. Everything the agent needs — context, locked decisions, scaffold commands, the exact
 > manual edits on top of the scaffold, version pins, traps, acceptance criteria — is in this
 > file. Agent: work through the steps in order; where a step says *verify*, actually run the
@@ -29,7 +29,7 @@ empty-but-installable walking skeleton whose only purpose is to prove the distri
 mechanics, because the decided distribution is unusual:
 
 **Git-only distribution, no npm publishing (prototype phase).** Consumers run
-`pnpm add "git+https://github.com/wohlben/qits-angular.git#<rev>"`. pnpm clones the repo,
+`pnpm add "git+https://github.com/wohlben/qits-angular-integration.git#<rev>"`. pnpm clones the repo,
 installs its devDependencies, runs the `prepare` script (which builds `dist/`), then packs using
 the `files` field. Every decision below serves that pipeline.
 
@@ -41,7 +41,7 @@ the `files` field. Every decision below serves that pipeline.
    **repo root** as the package, and the generated root `package.json` is a workspace shell —
    wrong name, no `exports`, no `files`, no `prepare`, no peers. So after scaffolding, the root
    manifest is rewritten to *be* the installable package — name `@qits/angular`,
-   `files`/`exports` pointing into the built `dist/qits-angular/`, `prepare` as the
+   `files`/`exports` pointing into the built `dist/qits-angular-integration/`, `prepare` as the
    consumer-side build hook, real `peerDependencies`. Step 2 specifies every field.
    (`private: true` **stays** — it blocks only registry publishing, which is exactly the
    decision, and does not affect git installs: verified, pnpm packs and installs private
@@ -63,7 +63,7 @@ The repository is **empty** — no scaffold, no README, possibly not even an ini
 Everything gets created here.
 
 ```bash
-git clone https://github.com/wohlben/qits-angular.git && cd qits-angular  # or start in the empty checkout
+git clone https://github.com/wohlben/qits-angular-integration.git && cd qits-angular-integration  # or start in the empty checkout
 git symbolic-ref HEAD refs/heads/main 2>/dev/null || true   # default branch main if no commit exists yet
 node --version   # must be 22.x
 corepack enable && corepack prepare pnpm@10.33.0 --activate
@@ -74,17 +74,17 @@ corepack enable && corepack prepare pnpm@10.33.0 --activate
 ```bash
 # Workspace without an application, generated INTO the existing checkout.
 # --directory . tolerates the existing .git and BOOTSTRAP.md; add --force only if it refuses.
-pnpm dlx @angular/cli@21 new qits-angular --create-application=false --directory . \
+pnpm dlx @angular/cli@21 new qits-angular-integration --create-application=false --directory . \
   --skip-git --package-manager pnpm --defaults
 
-# The library project. Project name stays unscoped (qits-angular) — the *package* name is set
-# to @qits/angular in the manifests in Step 2; ng-packagr flattens it to fesm2022/qits-angular.mjs.
-pnpm ng generate library qits-angular
+# The library project. Project name stays unscoped (qits-angular-integration) — the *package* name is set
+# to @qits/angular in the manifests in Step 2; ng-packagr flattens it to fesm2022/qits-angular-integration.mjs.
+pnpm ng generate library qits-angular-integration
 ```
 
 Then clean the example code the generator ships: delete the generated service/component files
-under `projects/qits-angular/src/lib/`, and empty the export list in
-`projects/qits-angular/src/public-api.ts` (Step 3 refills it).
+under `projects/qits-angular-integration/src/lib/`, and empty the export list in
+`projects/qits-angular-integration/src/public-api.ts` (Step 3 refills it).
 
 ## Step 2 — the root-manifest takeover (the load-bearing step)
 
@@ -94,27 +94,27 @@ rest):
 
 ```jsonc
 {
-  "name": "@qits/angular",              // was "qits-angular"; consumers import by this name
+  "name": "@qits/angular",              // was "qits-angular-integration"; consumers import by this name
   "version": "0.0.1",
   "private": true,                      // KEEP: blocks accidental registry publish (the git-only
                                         // decision, enforced); verified harmless to git installs
   "description": "qits integration for Angular apps: telemetry, feature capture, state snapshots (walking skeleton).",
   "license": "MIT",
-  "repository": { "type": "git", "url": "https://github.com/wohlben/qits-angular.git" },
+  "repository": { "type": "git", "url": "https://github.com/wohlben/qits-angular-integration.git" },
   "packageManager": "pnpm@10.33.0",
   "scripts": {
     "ng": "ng",
-    "build": "ng build qits-angular",
-    "test": "ng test qits-angular",
-    "lint": "ng lint qits-angular",
+    "build": "ng build qits-angular-integration",
+    "test": "ng test qits-angular-integration",
+    "lint": "ng lint qits-angular-integration",
     "check-exports": "node scripts/check-exports.mjs",
-    "prepare": "ng build qits-angular && node scripts/check-exports.mjs"
+    "prepare": "ng build qits-angular-integration && node scripts/check-exports.mjs"
   },
-  "files": ["dist/qits-angular"],
+  "files": ["dist/qits-angular-integration"],
   "exports": {
     ".": {
-      "types": "./dist/qits-angular/index.d.ts",
-      "default": "./dist/qits-angular/fesm2022/qits-angular.mjs"
+      "types": "./dist/qits-angular-integration/index.d.ts",
+      "default": "./dist/qits-angular-integration/fesm2022/qits-angular-integration.mjs"
     }
   },
   "sideEffects": false,
@@ -125,25 +125,25 @@ rest):
 
 Why each unusual field exists (leave these comments out of the actual JSON):
 
-- **`files: ["dist/qits-angular"]`** — pnpm *packs* git dependencies after building them;
+- **`files: ["dist/qits-angular-integration"]`** — pnpm *packs* git dependencies after building them;
   anything outside `files` is dropped from what the consumer receives. Without this, the built
   output never reaches the consumer. (`README.md`, `LICENSE`, `package.json` are always packed.)
 - **`prepare`** — runs after `pnpm install` in this repo (harmless local build) **and on the
   consumer side when pnpm builds the git dep** — that second run is the entire distribution
   mechanism. It also runs the exports drift check so a broken mirror fails the install loudly.
-- **`exports`** must mirror what ng-packagr writes into `dist/qits-angular/package.json` — the
+- **`exports`** must mirror what ng-packagr writes into `dist/qits-angular-integration/package.json` — the
   authoritative manifest that a *published* package would ship, unreachable here because the
   consumer installs the repo root. The exact FESM filename comes from the package name
-  (`@qits/angular` flattens to `qits-angular`); don't hand-guess it — build once and read
-  `dist/qits-angular/package.json`, and let `check-exports` guard it thereafter.
+  (`@qits/angular` flattens to `qits-angular-integration`); don't hand-guess it — build once and read
+  `dist/qits-angular-integration/package.json`, and let `check-exports` guard it thereafter.
 - **`peerDependencies`/`dependencies` live in BOTH manifests** — the consumer's package manager
   reads the *root* manifest (so peers must be here), while ng-packagr validates/emits from
-  `projects/qits-angular/package.json` (so they're there too). `check-exports` verifies the two
+  `projects/qits-angular-integration/package.json` (so they're there too). `check-exports` verifies the two
   stay in sync.
 
 And two sibling edits:
 
-- **`projects/qits-angular/package.json`**: set `"name": "@qits/angular"`, `"version": "0.0.1"`,
+- **`projects/qits-angular-integration/package.json`**: set `"name": "@qits/angular"`, `"version": "0.0.1"`,
   peers `@angular/core: ^21.2.0` (drop `@angular/common` unless generated code needs it),
   `dependencies: { "tslib": "^2.3.0" }`.
 - **`.gitignore`** (the generated one): ensure `dist/` and `*.tgz` are ignored. `dist/` is
@@ -156,13 +156,13 @@ And two sibling edits:
 import { readFileSync } from 'node:fs';
 
 const root = JSON.parse(readFileSync('package.json', 'utf8'));
-const dist = JSON.parse(readFileSync('dist/qits-angular/package.json', 'utf8'));
+const dist = JSON.parse(readFileSync('dist/qits-angular-integration/package.json', 'utf8'));
 
 let failed = false;
 const rootEntry = root.exports['.'];
 const distEntry = dist.exports['.'];
 for (const key of ['types', 'default']) {
-  const expected = './dist/qits-angular/' + distEntry[key].replace(/^\.\//, '');
+  const expected = './dist/qits-angular-integration/' + distEntry[key].replace(/^\.\//, '');
   if (rootEntry[key] !== expected) {
     console.error(`exports drift: root exports['.'].${key} is ${rootEntry[key]}, dist says ${expected}`);
     failed = true;
@@ -180,7 +180,7 @@ console.log('manifests in sync: root mirrors dist (exports + peers)');
 
 ## Step 3 — the walking-skeleton code
 
-`projects/qits-angular/src/lib/provide-qits-integration.ts`:
+`projects/qits-angular-integration/src/lib/provide-qits-integration.ts`:
 
 ```ts
 import { EnvironmentProviders, makeEnvironmentProviders } from '@angular/core';
@@ -198,7 +198,7 @@ export function provideQitsIntegration(): EnvironmentProviders {
 export async function initQitsIntegration(): Promise<void> {}
 ```
 
-`projects/qits-angular/src/lib/provide-qits-integration.spec.ts` — the assertion is trivial; the
+`projects/qits-angular-integration/src/lib/provide-qits-integration.spec.ts` — the assertion is trivial; the
 spec exists to prove the generated test toolchain end-to-end:
 
 ```ts
@@ -213,7 +213,7 @@ describe('provideQitsIntegration', () => {
 });
 ```
 
-`projects/qits-angular/src/public-api.ts`:
+`projects/qits-angular-integration/src/public-api.ts`:
 
 ```ts
 export { provideQitsIntegration, initQitsIntegration } from './lib/provide-qits-integration';
@@ -240,8 +240,8 @@ fights the workspace shape, a hand-written `eslint.config.mjs` with
 
 - **`README.md`** — the consumer contract. Must cover, briefly: what the library is (one
   paragraph, link to the qits repo); install
-  (`pnpm add "git+https://github.com/wohlben/qits-angular.git#<sha>"`); usage (the two lines);
-  the dev loop — **iterating against a consumer uses a local `file:../qits-angular` override or
+  (`pnpm add "git+https://github.com/wohlben/qits-angular-integration.git#<sha>"`); usage (the two lines);
+  the dev loop — **iterating against a consumer uses a local `file:../qits-angular-integration` override or
   `pnpm link`, never git-ref churn; commit a `#<sha>` pin only when cutting a consumable
   state**; and the packaging invariants (root manifest is the package, `files` carries dist,
   `prepare` builds on consumer install, root exports/peers mirror dist — one line each, so
@@ -273,7 +273,7 @@ available, since that is the environment qits consumers actually run):
 pnpm dlx @angular/cli@21 new smoke --minimal --skip-git --defaults && cd smoke
 
 # Criterion: local git URL — proves clone → devDeps install → prepare build → pack → files
-pnpm add "git+file://$(realpath ../qits-angular)#main"
+pnpm add "git+file://$(realpath ../qits-angular-integration)#main"
 
 # Wire it in: app.config.ts → providers: [provideQitsIntegration()]
 #             main.ts       → await initQitsIntegration() before bootstrapApplication
@@ -281,7 +281,7 @@ pnpm ng build             # must compile against the installed dist types
 
 # Criterion: the real remote, SHA-pinned — the exact form consumers will commit
 pnpm remove @qits/angular
-pnpm add "git+https://github.com/wohlben/qits-angular.git#<current sha>"
+pnpm add "git+https://github.com/wohlben/qits-angular-integration.git#<current sha>"
 pnpm ng build
 ```
 
@@ -295,7 +295,7 @@ Delete the smoke app afterwards; it is an instrument, not an artifact.
   `package.json`: `"pnpm": { "onlyBuiltDependencies": ["@qits/angular"] }` — verify which is
   needed during Step 6 and document the answer in the README.
 - **Manifest drift** — never hand-edit the root `exports`/peers on a hunch; run
-  `pnpm build && pnpm check-exports` and copy what `dist/qits-angular/package.json` actually
+  `pnpm build && pnpm check-exports` and copy what `dist/qits-angular-integration/package.json` actually
   says.
 - **`prepare` fallback (`release` branch)** — if consumer-side building proves flaky in a way an
   hour of debugging doesn't fix: create a `release` branch that commits `dist/` and has no
@@ -308,7 +308,7 @@ Delete the smoke app afterwards; it is an instrument, not an artifact.
 
 ## Acceptance criteria (all five, in order)
 
-1. `pnpm build` produces APF output under `dist/qits-angular/`: `fesm2022/qits-angular.mjs`,
+1. `pnpm build` produces APF output under `dist/qits-angular-integration/`: `fesm2022/qits-angular-integration.mjs`,
    `index.d.ts`, and a generated `package.json`; the FESM contains `ɵɵngDeclare`
    partial-compilation calls (the library tsconfig's `compilationMode: partial` — scaffolded by
    the generator — applied), not full `ɵɵdefine*` output.
